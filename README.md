@@ -100,3 +100,13 @@ embedded in the extension binary. Optional schema argument controls where tables
 ### `debug_standardize_address(...) -> VARCHAR`
 
 Same signatures as `standardize_address`. Returns a human-readable debug trace instead of a struct.
+
+## Platform Support
+
+| Platform | Status |
+|----------|--------|
+| Linux (amd64, arm64) | Supported |
+| macOS (amd64, arm64) | Supported |
+| Windows (MinGW) | Supported |
+| Windows (MSVC) | Planned — needs a small `pthread_mutex` → `CRITICAL_SECTION` abstraction |
+| WASM | Not supported — requires threading primitives unavailable in WASM |
