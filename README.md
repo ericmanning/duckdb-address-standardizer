@@ -106,7 +106,8 @@ Same signatures as `standardize_address`. Returns a human-readable debug trace i
 | Platform | Status |
 |----------|--------|
 | Linux (amd64, arm64) | Supported |
-| macOS (amd64, arm64) | Supported |
+| macOS (arm64) | Supported |
+| macOS (amd64) | Not yet — CI cross-compilation gap for C API extensions |
 | Windows (MinGW) | Supported |
-| Windows (MSVC) | Planned — needs a small `pthread_mutex` → `CRITICAL_SECTION` abstraction |
+| Windows (MSVC) | Not yet — needs `pthread_mutex` → `CRITICAL_SECTION` abstraction |
 | WASM | Not supported — requires threading primitives unavailable in WASM |
