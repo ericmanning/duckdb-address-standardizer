@@ -39,5 +39,8 @@ void register_standardize_address(duckdb_connection connection,
 void register_debug_standardize_address(duckdb_connection connection,
                                          duckdb_extension_info info,
                                          struct duckdb_extension_access *access);
+void register_load_us_address_data(duckdb_connection connection,
+                                    duckdb_extension_info info,
+                                    struct duckdb_extension_access *access);
 
 #endif

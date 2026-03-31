@@ -1,0 +1,77 @@
+# name: test/sql/load_us_address_data.test
+# description: Test load_us_address_data() function
+# group: [address_standardizer]
+
+require address_standardizer
+
+# Test 0-arg: load into current schema
+statement ok
+SELECT load_us_address_data();
+
+# Verify tables exist with correct row counts
+query I
+SELECT count(*) FROM us_lex;
+----
+2940
+
+query I
+SELECT count(*) FROM us_gaz;
+----
+1074
+
+query I
+SELECT count(*) FROM us_rules;
+----
+4369
+
+# Verify data content: spot-check a lex entry
+query IIII
+SELECT seq, word, stdword, token FROM us_lex WHERE id = 3;
+----
+1	&	AND	13
+
+# Verify data content: spot-check a gaz entry with escaped quote
+query IIII
+SELECT seq, word, stdword, token FROM us_gaz WHERE id = 459;
+----
+1	BOIS D'ARC	BOIS D ARC	10
+
+# Verify data content: spot-check a rules entry
+query I
+SELECT rule FROM us_rules WHERE id = 1;
+----
+1 -1 5 -1 2 7
+
+# Verify standardize_address works with loaded tables
+query I
+SELECT (standardize_address('us_lex', 'us_gaz', 'us_rules', '123 Main St', 'Kansas City, MO 64108')).house_num;
+----
+123
+
+# Test 1-arg: load into a specific schema
+statement ok
+CREATE SCHEMA test_schema;
+
+statement ok
+SELECT load_us_address_data('test_schema');
+
+query I
+SELECT count(*) FROM test_schema.us_lex;
+----
+2940
+
+query I
+SELECT count(*) FROM test_schema.us_gaz;
+----
+1074
+
+query I
+SELECT count(*) FROM test_schema.us_rules;
+----
+4369
+
+# Verify standardize_address works with schema-qualified tables
+query I
+SELECT (standardize_address('test_schema.us_lex', 'test_schema.us_gaz', 'test_schema.us_rules', '456 Oak Ave', 'Denver, CO 80202')).house_num;
+----
+456

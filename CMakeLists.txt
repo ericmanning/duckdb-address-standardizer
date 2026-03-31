@@ -47,6 +47,7 @@ set(EXTENSION_SOURCES
     src/address_standardizer_duckdb.c
     src/debug_standardize_address_duckdb.c
     src/parseaddress_duckdb.c
+    src/load_us_data_duckdb.c
     src/duckdb_entry.c
 )
 
@@ -72,6 +73,7 @@ target_compile_definitions(${EXTENSION_NAME} PRIVATE
 # Include paths
 target_include_directories(${EXTENSION_NAME} PRIVATE
     src/include                    # DuckDB-specific headers (postgres.h shim, etc.)
+    src/generated                  # Auto-generated data headers
     address-standardizer/src       # Original PAGC headers
     duckdb_capi                    # DuckDB C API header
 )
