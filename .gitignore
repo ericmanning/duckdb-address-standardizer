@@ -1,0 +1,10 @@
+build/
+cmake_build/
+duckdb_capi/
+.venv/
+*.duckdb_extension
+*.dylib
+*.so
+*.dll
+.DS_Store
+configure/

@@ -1,0 +1,308 @@
+# name: test/sql/address_standardizer.test
+# description: Test parse_address function
+# group: [address_standardizer]
+
+require address_standardizer
+
+# ---- parse_address: empty/blank input edge cases ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('') as pa);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address(' ') as pa);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address(' , ,  ') as pa);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL
+
+# ---- parse_address basic tests ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 Main Street, Kansas City, MO 45678') as pa);
+----
+123	Main Street	NULL	123 Main Street	Kansas City	MO	45678	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('385 Landgrove Rd  Landgrove VT 05148') as pa);
+----
+385	Landgrove Rd	NULL	385 Landgrove Rd	Landgrove	VT	05148	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('university ave w @ main st, saint paul, mn, 55104-3431') as pa);
+----
+NULL	university ave w	main st	NULL	saint paul	MN	55104	3431	US
+
+# ---- parse_address: street type + directionals (no comma) ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e n mycity ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east n mycity ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e north mycity ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north mycity	NY	NULL	NULL	US
+
+# ---- parse_address: street type + directionals + saint (no comma) ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e n st marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east n st marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e north st marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e n saint marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east n saint marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e north saint marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north saint marie	NY	NULL	NULL	US
+
+# ---- parse_address: street type + directional + saint (no second directional, no comma) ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e st marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	e st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east st marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	east st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e saint marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	e saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east saint marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	east saint marie	NY	NULL	NULL	US
+
+# ---- parse_address: street type + saint (no directionals, no comma) ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln st marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane st marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln saint marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane saint marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	saint marie	NY	NULL	NULL	US
+
+# ---- parse_address: street type + plain words (no comma) ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln new marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	new marie	NY	NULL	NULL	US
+
+# ---- parse_address: same patterns WITH commas ----
+
+# sttype dirs dirs words (with comma)
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, n mycity ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east, n mycity ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, north mycity ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e n, mycity ny') as pa);
+----
+123	oak ln e n	NULL	123 oak ln e n	mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east n, mycity ny') as pa);
+----
+123	oak lane east n	NULL	123 oak lane east n	mycity	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e north, mycity ny') as pa);
+----
+123	oak ln e north	NULL	123 oak ln e north	mycity	NY	NULL	NULL	US
+
+# sttype dirs dirs saint words (with comma)
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, n st marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east, n st marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, north st marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, n saint marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	n saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east, n saint marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	n saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, north saint marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	north saint marie	NY	NULL	NULL	US
+
+# sttype dirs saint words (with comma)
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, st marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east, st marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln e, saint marie ny') as pa);
+----
+123	oak ln e	NULL	123 oak ln e	saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane east, saint marie ny') as pa);
+----
+123	oak lane east	NULL	123 oak lane east	saint marie	NY	NULL	NULL	US
+
+# sttype saint words (with comma)
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln, st marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane, st marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	st marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln, saint marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	saint marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak lane, saint marie ny') as pa);
+----
+123	oak lane	NULL	123 oak lane	saint marie	NY	NULL	NULL	US
+
+# sttype words (with comma)
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln, marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	marie	NY	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('123 oak ln, new marie ny') as pa);
+----
+123	oak ln	NULL	123 oak ln	new marie	NY	NULL	NULL	US
+
+# ---- parse_address: country canonicalization ----
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('529 Main Street, Boston, MA 021') as pa);
+----
+529	Main Street	NULL	529 Main Street	Boston	MA	021	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('529 Main Street, Boston, MA 021, France') as pa);
+----
+529	Main Street	NULL	529 Main Street	Boston	MA	021	NULL	FR
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('100 Peachtree St, Atlanta, Georgia') as pa);
+----
+100	Peachtree St	NULL	100 Peachtree St	Atlanta	GA	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('212 n 3rd ave, Minneapolis, mn 55401, USA') as pa);
+----
+212	n 3rd ave	NULL	212 n 3rd ave	Minneapolis	MN	55401	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('26 Court Street, Boston, Massachusetts 02109, FR') as pa);
+----
+26	Court Street	NULL	26 Court Street	Boston	MA	02109	NULL	FR
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('26 Court Street, Boston, MA 02109, Rear') as pa);
+----
+26	Court Street, Boston, MA 02109	NULL	26 Court Street, Boston, MA 02109	Rear	NULL	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('212 N 3rd Ave, Minneapolis, MN 55401, Suite A') as pa);
+----
+212	N 3rd Ave, Minneapolis, MN 55401	NULL	212 N 3rd Ave, Minneapolis, MN 55401	Suite A	NULL	NULL	NULL	US
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('26 Court Street, Boston, Massachusetts 02109, France') as pa);
+----
+26	Court Street	NULL	26 Court Street	Boston	MA	02109	NULL	FR
+
+query IIIIIIIII
+SELECT pa.* FROM (SELECT parse_address('10 Main Street, Toronto, ON M5V 2T6, France') as pa);
+----
+10	Main Street	NULL	10 Main Street	Toronto	ON	M5V 2T6	NULL	FR

@@ -1,0 +1,6 @@
+[submodule "address-standardizer"]
+	path = address-standardizer
+	url = https://github.com/ericmanning/address_standardizer.git
+[submodule "extension-ci-tools"]
+	path = extension-ci-tools
+	url = https://github.com/duckdb/extension-ci-tools.git
