@@ -32,6 +32,9 @@ cd benchmark
 
 # 5. Compare outputs
 ./06_export_and_compare.sh
+
+# 6. Recheck diffs through fresh PG connection
+./07_recheck_diffs.sh
 ```
 
 ## Scripts
@@ -46,6 +49,7 @@ cd benchmark
 | `04_bench_pg.sh` | Benchmarks PG at each configured size, repeated `RUNS` times. Parses `\timing` output and logs to `timings.tsv`. |
 | `05_bench_duckdb.sh` | Benchmarks DuckDB at each configured size × thread count (1, 4, 8, default), repeated `RUNS` times. Logs to the same `timings.tsv`. |
 | `06_export_and_compare.sh` | Exports full results from both engines to CSV, then runs a per-field mismatch count and prints sample differences. |
+| `07_recheck_diffs.sh` | Takes rows that differed in step 06, re-standardizes them through a single fresh PG connection, and compares against DuckDB. Isolates PAGC state-leakage diffs from real code differences. |
 
 ## Configuration
 
