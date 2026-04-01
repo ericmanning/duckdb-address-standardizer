@@ -111,3 +111,11 @@ Same signatures as `standardize_address`. Returns a human-readable debug trace i
 | Windows (MinGW) | Supported |
 | Windows (MSVC) | Not yet — needs `pthread_mutex` → `CRITICAL_SECTION` abstraction |
 | WASM | Not supported — requires threading primitives unavailable in WASM |
+
+## License
+
+Portions of this code belong to their respective contributors. The upstream
+PostGIS address standardizer on which this extension is built is released
+under the MIT license (see [LICENSE](LICENSE).). Modifications in this extension and the forked submodule are
+
+Copyright (c) 2026 The Trustees of Princeton University
