@@ -122,13 +122,15 @@ else()
     set(CARGO_BUILD_FLAG "")
 endif()
 
-if(WIN32)
-    set(ADDRUST_LIB_NAME addrust_ffi.lib)
-else()
-    set(ADDRUST_LIB_NAME libaddrust_ffi.a)
+# Static lib name varies by platform/toolchain
+set(ADDRUST_LIB_NAME libaddrust_ffi.a)
+
+# Cross-compilation: map DUCKDB_PLATFORM to Cargo --target.
+# CI passes DUCKDB_PLATFORM as an env var; read it into a CMake variable.
+if(NOT DEFINED DUCKDB_PLATFORM AND DEFINED ENV{DUCKDB_PLATFORM})
+    set(DUCKDB_PLATFORM $ENV{DUCKDB_PLATFORM})
 endif()
 
-# Cross-compilation: map DUCKDB_PLATFORM to Cargo --target
 set(CARGO_TARGET_FLAG "")
 set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target)
 if(DEFINED DUCKDB_PLATFORM)
@@ -164,6 +166,8 @@ target_link_libraries(${EXTENSION_NAME} ${ADDRUST_LIB})
 # Rust staticlibs require system libraries
 if(APPLE)
     target_link_libraries(${EXTENSION_NAME} "-framework Security" "-framework CoreFoundation")
+elseif(WIN32)
+    target_link_libraries(${EXTENSION_NAME} ntdll userenv ws2_32 bcrypt)
 elseif(UNIX)
     target_link_libraries(${EXTENSION_NAME} pthread dl m)
 endif()

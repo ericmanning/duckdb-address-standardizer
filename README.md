@@ -8,7 +8,9 @@ A DuckDB extension providing US address parsing and standardization functions:
   [addrust](https://github.com/EvictionLab/addrust) Rust address parser, with
   optional TOML configuration for customizable parsing pipelines
 
-## Prerequisites
+## Building
+
+### Prerequisites
 
 - C compiler (gcc/clang)
 - CMake 3.5+
@@ -17,7 +19,7 @@ A DuckDB extension providing US address parsing and standardization functions:
 - [Rust](https://rustup.rs/) toolchain (for building the addrust component)
 - Make, Git
 
-### Install pcre2
+#### Install pcre2
 
 ```bash
 # macOS
@@ -30,7 +32,7 @@ sudo apt install libpcre2-dev
 sudo dnf install pcre2-devel
 ```
 
-## Building
+### Build
 
 ```bash
 # Clone with submodules (for DuckDB CI tools)
@@ -46,45 +48,10 @@ make debug
 make release
 ```
 
-## Testing
+### Test
 
 ```bash
 make test_debug
-```
-
-## Usage
-
-```sql
-LOAD 'address_standardizer';
-
--- ─── addrust parser (no reference tables needed) ───────────────
-
--- Parse an address with the default pipeline
-SELECT ap.*
-FROM (SELECT addrust_parse('123 N Main St Apt 4, Springfield IL 62704') AS ap);
-
--- Parse with a custom TOML config file
-SELECT ap.*
-FROM (SELECT addrust_parse('123 N Main St', '/path/to/.addrust.toml') AS ap);
-
--- ─── PAGC standardizer (requires reference tables) ────────────
-
--- Load built-in US reference data (one-time per database)
-SELECT load_us_address_data();
-
--- Simple address parsing (regex-based, no reference tables)
-SELECT pa.*
-FROM (SELECT parse_address('123 Main Street, Kansas City, MO 45678') AS pa);
-
--- Full standardization (5-arg: micro + macro)
-SELECT sa.*
-FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
-    '123 Main Street', 'Kansas City, MO 45678') AS sa);
-
--- Single-line version (4-arg)
-SELECT sa.*
-FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
-    '123 Main Street, Kansas City, MO 45678') AS sa);
 ```
 
 ## Functions
@@ -129,7 +96,43 @@ embedded in the extension binary. Optional schema argument controls where tables
 
 Same signatures as `standardize_address`. Returns a human-readable debug trace instead of a struct.
 
+## Usage
+
+```sql
+LOAD 'address_standardizer';
+
+-- ─── addrust parser (no reference tables needed) ───────────────
+
+-- Parse an address with the default pipeline
+SELECT ap.*
+FROM (SELECT addrust_parse('123 N Main St Apt 4, Springfield IL 62704') AS ap);
+
+-- Parse with a custom TOML config file
+SELECT ap.*
+FROM (SELECT addrust_parse('123 N Main St', '/path/to/.addrust.toml') AS ap);
+
+-- ─── PAGC standardizer (requires reference tables) ────────────
+
+-- Load built-in US reference data (one-time per database)
+SELECT load_us_address_data();
+
+-- Simple address parsing (regex-based, no reference tables)
+SELECT pa.*
+FROM (SELECT parse_address('123 Main Street, Kansas City, MO 45678') AS pa);
+
+-- Full standardization (5-arg: micro + macro)
+SELECT sa.*
+FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
+    '123 Main Street', 'Kansas City, MO 45678') AS sa);
+
+-- Single-line version (4-arg)
+SELECT sa.*
+FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
+    '123 Main Street, Kansas City, MO 45678') AS sa);
+```
+
 ## Platform Support
+
 
 | Platform | Status |
 |----------|--------|
@@ -142,8 +145,8 @@ Same signatures as `standardize_address`. Returns a human-readable debug trace i
 
 ## License
 
-Portions of this code belong to their respective contributors. The upstream
-PostGIS address standardizer on which this extension is built is released
-under the MIT license. The `addrust` parser is released under the MIT license. (See [LICENSE](LICENSE) for attributions.) Modifications in this extension and the forked PostGIS submodule are
+Portions of this code belong to their respective contributors. The upstream PostGIS address standardizer on which this extension is built is released under the MIT license. The `addrust` parser is released under the MIT license. See [LICENSE](LICENSE) for attributions.
+
+Modifications in this extension and the forked PostGIS submodule are
 
 Copyright (c) 2026 The Trustees of Princeton University
