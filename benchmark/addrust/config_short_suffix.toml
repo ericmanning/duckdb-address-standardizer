@@ -1,0 +1,20 @@
+# Custom addrust config for benchmark testing.
+# Exercises the config_path overload of addrust_parse().
+#
+# Changes from default:
+#   1. suffix  → short form (ST instead of STREET, AVE instead of AVENUE)
+#   2. direction → long form (NORTH instead of N, SOUTHWEST instead of SW)
+#   3. state → long form (NEW YORK instead of NY, CALIFORNIA instead of CA)
+#   4. Disable ordinal-to-word conversion (42ND stays 42ND, not FORTYSECOND)
+#   5. Add a custom suffix mapping (PSGE → PASSAGE)
+
+[output]
+suffix = "short"
+direction = "long"
+state = "long"
+
+[steps]
+disabled = ["ordinal_to_word"]
+
+[dictionaries.suffix]
+add = [{ short = "PSGE", long = "PASSAGE" }]

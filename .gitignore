@@ -8,3 +8,4 @@ duckdb_capi/
 *.dll
 .DS_Store
 configure/
+addrust-ffi/target/

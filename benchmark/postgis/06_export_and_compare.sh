@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Export full standardization results from both engines and compare per-field.
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 PG_CSV="$RESULTS_DIR/results_pg.csv"
 DK_CSV="$RESULTS_DIR/results_duckdb.csv"

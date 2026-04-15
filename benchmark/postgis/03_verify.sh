@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sanity check: run a known address through both engines and compare output.
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 MICRO="123 Main Street"
 MACRO="Kansas City, MO 45678"

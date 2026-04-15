@@ -5,7 +5,7 @@
 #
 # Requires: 06_export_and_compare.sh has already run (produces results_pg.csv
 # and results_duckdb.csv in $RESULTS_DIR).
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 PG_CSV="$RESULTS_DIR/results_pg.csv"
 DK_CSV="$RESULTS_DIR/results_duckdb.csv"

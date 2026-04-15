@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Benchmark standardize_address on DuckDB.
 # Runs each (size x thread_count x RUNS), logs wall-clock timings to timings.tsv.
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 TIMINGS_FILE="$RESULTS_DIR/timings.tsv"
 

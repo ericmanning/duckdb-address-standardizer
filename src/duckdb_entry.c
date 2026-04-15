@@ -15,5 +15,6 @@ DUCKDB_EXTENSION_ENTRYPOINT(duckdb_connection connection,
     register_standardize_address(connection, info, access);
     register_debug_standardize_address(connection, info, access);
     register_load_us_address_data(connection, info, access);
+    register_addrust_parse(connection);
     return true;
 }
