@@ -1,0 +1,138 @@
+# name: test/sql/addrust_parse_golden.test
+# description: Golden dataset tests (mirrors addrust tests/golden.rs)
+# group: [address_standardizer]
+
+require address_standardizer
+
+# Golden 1: NA input → all fields empty
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('NA') AS ap);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	NULL
+
+# Golden 2: Basic address
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Main St') AS ap);
+----
+123	NULL	MAIN	STREET	NULL	NULL	NULL
+
+# Golden 3: Way suffix
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Main Way') AS ap);
+----
+123	NULL	MAIN	WAY	NULL	NULL	NULL
+
+# Golden 4: Leading zeros stripped
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('00123 Main St') AS ap);
+----
+123	NULL	MAIN	STREET	NULL	NULL	NULL
+
+# Golden 5: Street name not confused with suffix
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Miles St') AS ap);
+----
+123	NULL	MILES	STREET	NULL	NULL	NULL
+
+# Golden 6: PO Box only
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('PO BOX 123') AS ap);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	PO BOX 123
+
+# Golden 7: Multi-word street name
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Park Place Market St') AS ap);
+----
+123	NULL	PARK PLACE MARKET	STREET	NULL	NULL	NULL
+
+# Golden 8: Fractional unit (1/2)
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('156 1/2 Main St') AS ap);
+----
+156	NULL	MAIN	STREET	NULL	1/2	NULL
+
+# Golden 9: Pre-direction (abbreviated)
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 N Main St') AS ap);
+----
+123	N	MAIN	STREET	NULL	NULL	NULL
+
+# Golden 10: Pre-direction (full word → abbreviated)
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 East Main St') AS ap);
+----
+123	E	MAIN	STREET	NULL	NULL	NULL
+
+# Golden 11: Pre-direction AND post-direction
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 East Main St N') AS ap);
+----
+123	E	MAIN	STREET	N	NULL	NULL
+
+# Golden 12: Drive suffix expanded
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Raven Dr') AS ap);
+----
+123	NULL	RAVEN	DRIVE	NULL	NULL	NULL
+
+# Golden 13: Single letter street name
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('100 F Ave') AS ap);
+----
+100	NULL	F	AVENUE	NULL	NULL	NULL
+
+# Golden 14: Hash-number unit → street_number
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('Main St #5') AS ap);
+----
+5	NULL	MAIN	STREET	NULL	NULL	NULL
+
+# Golden 15: Name not confused with AND suffix
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Andie St') AS ap);
+----
+123	NULL	ANDIE	STREET	NULL	NULL	NULL
+
+# Golden 16: Orchard not confused with suffix
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Orchard St') AS ap);
+----
+123	NULL	ORCHARD	STREET	NULL	NULL	NULL
+
+# Golden 17: Pre-direction W
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 W Flower St') AS ap);
+----
+123	W	FLOWER	STREET	NULL	NULL	NULL
+
+# Golden 18: ST → SAINT expansion
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('42 W St James Pl') AS ap);
+----
+42	W	SAINT JAMES	PLACE	NULL	NULL	NULL
+
+# Golden 19: PO Box + street address combined
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('PO Box 343 789 S Oak Ave') AS ap);
+----
+789	S	OAK	AVENUE	NULL	NULL	PO BOX 343

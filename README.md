@@ -1,18 +1,25 @@
 # DuckDB Address Standardizer Extension
 
-A DuckDB extension providing `parse_address()`, `standardize_address()`, and
-`load_us_address_data()` functions, ported from the
-[PostGIS address_standardizer](https://github.com/postgis/address_standardizer).
+A DuckDB extension providing US address parsing and standardization functions:
 
-## Prerequisites
+- **PAGC-based** (`parse_address`, `standardize_address`) — ported from the
+  [PostGIS address_standardizer](https://github.com/postgis/address_standardizer)
+- **addrust-based** (`addrust_parse`) — powered by the
+  [addrust](https://github.com/EvictionLab/addrust) Rust address parser, with
+  optional TOML configuration for customizable parsing pipelines
+
+## Building
+
+### Prerequisites
 
 - C compiler (gcc/clang)
 - CMake 3.5+
 - Python 3 with venv
 - [pcre2](https://github.com/PCRE2Project/pcre2) development headers
+- [Rust](https://rustup.rs/) toolchain (for building the addrust component)
 - Make, Git
 
-### Install pcre2
+#### Install pcre2
 
 ```bash
 # macOS
@@ -25,7 +32,7 @@ sudo apt install libpcre2-dev
 sudo dnf install pcre2-devel
 ```
 
-## Building
+### Build
 
 ```bash
 # Clone with submodules (for DuckDB CI tools)
@@ -41,49 +48,37 @@ make debug
 make release
 ```
 
-## Testing
+### Test
 
 ```bash
 make test_debug
 ```
 
-## Usage
-
-```sql
-LOAD 'address_standardizer';
-
--- Simple address parsing (no reference tables needed)
--- Returns a STRUCT; use .* to unpack into columns
-SELECT pa.*
-FROM (SELECT parse_address('123 Main Street, Kansas City, MO 45678') AS pa);
-
--- Load built-in US reference data (one-time per database)
-SELECT load_us_address_data();
-
--- Or load into a specific schema:
--- SELECT load_us_address_data('my_schema');
-
--- Full standardization (5-arg: micro + macro)
-SELECT sa.*
-FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
-    '123 Main Street', 'Kansas City, MO 45678') AS sa);
-
--- Single-line version (4-arg)
-SELECT sa.*
-FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
-    '123 Main Street, Kansas City, MO 45678') AS sa);
-```
-
 ## Functions
+
+### `addrust_parse(address VARCHAR) -> STRUCT`
+
+Configurable Rust-based address parser powered by [addrust](https://github.com/EvictionLab/addrust).
+Returns a struct with 15 fields:
+`street_number`, `pre_direction`, `street_name`, `suffix`, `post_direction`,
+`unit_type`, `unit`, `po_box`, `building`, `building_type`,
+`extra_front`, `extra_back`, `city`, `state`, `zip`
+
+### `addrust_parse(address VARCHAR, config_path VARCHAR) -> STRUCT`
+
+Same as above but loads a custom TOML configuration file to control the parsing pipeline
+(disable steps, change output formats, add dictionary entries, etc.).
+See [addrust documentation](https://github.com/EvictionLab/addrust) for config options.
 
 ### `parse_address(address VARCHAR) -> STRUCT`
 
-Simple regex-based address parser. Returns a struct with fields:
+Simple regex-based address parser (PAGC). Returns a struct with fields:
 `num`, `street`, `street2`, `address1`, `city`, `state`, `zip`, `zipplus`, `country`
 
 ### `standardize_address(lextab, gaztab, rultab, micro, macro) -> STRUCT`
 
-Full PAGC rule-based standardization (5-argument form). Returns a struct with fields:
+Full PAGC rule-based standardization (5-argument form). Requires reference tables loaded
+via `load_us_address_data()`. Returns a struct with fields:
 `building`, `house_num`, `predir`, `qual`, `pretype`, `name`, `suftype`, `sufdir`,
 `ruralroute`, `extra`, `city`, `state`, `country`, `postcode`, `box`, `unit`
 
@@ -101,7 +96,43 @@ embedded in the extension binary. Optional schema argument controls where tables
 
 Same signatures as `standardize_address`. Returns a human-readable debug trace instead of a struct.
 
+## Usage
+
+```sql
+LOAD 'address_standardizer';
+
+-- ─── addrust parser (no reference tables needed) ───────────────
+
+-- Parse an address with the default pipeline
+SELECT ap.*
+FROM (SELECT addrust_parse('123 N Main St Apt 4, Springfield IL 62704') AS ap);
+
+-- Parse with a custom TOML config file
+SELECT ap.*
+FROM (SELECT addrust_parse('123 N Main St', '/path/to/.addrust.toml') AS ap);
+
+-- ─── PAGC standardizer (requires reference tables) ────────────
+
+-- Load built-in US reference data (one-time per database)
+SELECT load_us_address_data();
+
+-- Simple address parsing (regex-based, no reference tables)
+SELECT pa.*
+FROM (SELECT parse_address('123 Main Street, Kansas City, MO 45678') AS pa);
+
+-- Full standardization (5-arg: micro + macro)
+SELECT sa.*
+FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
+    '123 Main Street', 'Kansas City, MO 45678') AS sa);
+
+-- Single-line version (4-arg)
+SELECT sa.*
+FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
+    '123 Main Street, Kansas City, MO 45678') AS sa);
+```
+
 ## Platform Support
+
 
 | Platform | Status |
 |----------|--------|
@@ -114,8 +145,8 @@ Same signatures as `standardize_address`. Returns a human-readable debug trace i
 
 ## License
 
-Portions of this code belong to their respective contributors. The upstream
-PostGIS address standardizer on which this extension is built is released
-under the MIT license (see [LICENSE](LICENSE).). Modifications in this extension and the forked submodule are
+Portions of this code belong to their respective contributors. The upstream PostGIS address standardizer on which this extension is built is released under the MIT license. The `addrust` parser is released under the MIT license. See [LICENSE](LICENSE) for attributions.
+
+Modifications in this extension and the forked PostGIS submodule are
 
 Copyright (c) 2026 The Trustees of Princeton University

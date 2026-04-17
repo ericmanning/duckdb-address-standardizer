@@ -48,6 +48,7 @@ set(EXTENSION_SOURCES
     src/debug_standardize_address_duckdb.c
     src/parseaddress_duckdb.c
     src/load_us_data_duckdb.c
+    src/addrust_parse_duckdb.c
     src/duckdb_entry.c
 )
 
@@ -108,4 +109,65 @@ else()
             target_link_libraries(${EXTENSION_NAME} pcre2-8)
         endif()
     endif()
+endif()
+
+# --- Rust (addrust-ffi) integration ---
+set(ADDRUST_FFI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/addrust-ffi)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CARGO_BUILD_TYPE release)
+    set(CARGO_BUILD_FLAG --release)
+else()
+    set(CARGO_BUILD_TYPE debug)
+    set(CARGO_BUILD_FLAG "")
+endif()
+
+# Static lib name varies by platform/toolchain
+set(ADDRUST_LIB_NAME libaddrust_ffi.a)
+
+# Cross-compilation: map DUCKDB_PLATFORM to Cargo --target.
+# CI passes DUCKDB_PLATFORM as an env var; read it into a CMake variable.
+if(NOT DEFINED DUCKDB_PLATFORM AND DEFINED ENV{DUCKDB_PLATFORM})
+    set(DUCKDB_PLATFORM $ENV{DUCKDB_PLATFORM})
+endif()
+
+set(CARGO_TARGET_FLAG "")
+set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target)
+if(DEFINED DUCKDB_PLATFORM)
+    if(DUCKDB_PLATFORM STREQUAL "osx_arm64")
+        set(CARGO_TARGET_FLAG --target aarch64-apple-darwin)
+        set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/aarch64-apple-darwin)
+    elseif(DUCKDB_PLATFORM STREQUAL "osx_amd64")
+        set(CARGO_TARGET_FLAG --target x86_64-apple-darwin)
+        set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/x86_64-apple-darwin)
+    elseif(DUCKDB_PLATFORM STREQUAL "linux_arm64")
+        set(CARGO_TARGET_FLAG --target aarch64-unknown-linux-gnu)
+        set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/aarch64-unknown-linux-gnu)
+    elseif(DUCKDB_PLATFORM MATCHES "windows_amd64_mingw|windows_amd64_rtools")
+        set(CARGO_TARGET_FLAG --target x86_64-pc-windows-gnu)
+        set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/x86_64-pc-windows-gnu)
+    endif()
+endif()
+
+set(ADDRUST_LIB ${CARGO_TARGET_DIR}/${CARGO_BUILD_TYPE}/${ADDRUST_LIB_NAME})
+
+add_custom_command(
+    OUTPUT ${ADDRUST_LIB}
+    COMMAND cargo build ${CARGO_BUILD_FLAG} ${CARGO_TARGET_FLAG}
+    WORKING_DIRECTORY ${ADDRUST_FFI_DIR}
+    COMMENT "Building addrust-ffi Rust static library"
+)
+add_custom_target(addrust_ffi_build DEPENDS ${ADDRUST_LIB})
+
+add_dependencies(${EXTENSION_NAME} addrust_ffi_build)
+target_include_directories(${EXTENSION_NAME} PRIVATE ${ADDRUST_FFI_DIR}/include)
+target_link_libraries(${EXTENSION_NAME} ${ADDRUST_LIB})
+
+# Rust staticlibs require system libraries
+if(APPLE)
+    target_link_libraries(${EXTENSION_NAME} "-framework Security" "-framework CoreFoundation")
+elseif(WIN32)
+    target_link_libraries(${EXTENSION_NAME} ntdll userenv ws2_32 bcrypt)
+elseif(UNIX)
+    target_link_libraries(${EXTENSION_NAME} pthread dl m)
 endif()

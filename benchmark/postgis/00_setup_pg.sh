@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Set up PostgreSQL 18, build+install the address_standardizer extension
 # from the address-standardizer submodule, and create the benchmark database.
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 echo "=== PostgreSQL Setup ==="
 

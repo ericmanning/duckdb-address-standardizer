@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Load parquet data into both PostgreSQL and DuckDB.
-source "$(dirname "$0")/config.sh"
+source "$(dirname "$0")/../config.sh"
 
 echo "=== Loading Data ==="
 echo "Parquet file: $PARQUET_FILE"

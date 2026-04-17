@@ -1,0 +1,214 @@
+# name: test/sql/addrust_parse.test
+# description: Functional tests for addrust_parse (mirrors addrust tests/config.rs default pipeline)
+# group: [address_standardizer]
+
+require address_standardizer
+
+# --- NULL / edge cases ---
+
+# SQL NULL input
+query I
+SELECT addrust_parse(NULL);
+----
+NULL
+
+# Empty string
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('') AS ap);
+----
+NULL	NULL	NULL	NULL	NULL	NULL	NULL
+
+# --- NA value handling (test_full_pipeline_with_tables_cleanup) ---
+
+# NULL string is an NA value
+query II
+SELECT ap.street_name, ap.street_number
+FROM (SELECT addrust_parse('NULL') AS ap);
+----
+NULL	NULL
+
+# UNKNOWN is an NA value
+query II
+SELECT ap.street_name, ap.street_number
+FROM (SELECT addrust_parse('UNKNOWN') AS ap);
+----
+NULL	NULL
+
+# --- Street name abbreviation expansion ---
+
+# MT → MOUNT
+query II
+SELECT ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 MT PLEASANT AVE') AS ap);
+----
+MOUNT PLEASANT	AVENUE
+
+# FT → FORT
+query II
+SELECT ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('456 FT HAMILTON PKWY') AS ap);
+----
+FORT HAMILTON	PARKWAY
+
+# ST → SAINT (hardcoded)
+query II
+SELECT ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('789 ST MARKS PL') AS ap);
+----
+SAINT MARKS	PLACE
+
+# --- Suffix handling ---
+
+# Default is long form
+query I
+SELECT ap.suffix FROM (SELECT addrust_parse('123 Main St') AS ap);
+----
+STREET
+
+# Variant spelling normalized (DRIV → DRIVE)
+query I
+SELECT ap.suffix FROM (SELECT addrust_parse('123 Main Driv') AS ap);
+----
+DRIVE
+
+# --- Direction handling ---
+
+# Default is short form
+query I
+SELECT ap.pre_direction FROM (SELECT addrust_parse('123 North Main St') AS ap);
+----
+N
+
+# --- Unit type and value (test_unit_type_extracted) ---
+
+query IIII
+SELECT ap.unit_type, ap.unit, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 Main St Apt 4B') AS ap);
+----
+APT	4B	MAIN	STREET
+
+# --- Highway number-to-word (test_highway_number_to_word) ---
+
+query III
+SELECT ap.street_number, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 HIGHWAY 66') AS ap);
+----
+123	HIGHWAY SIXTYSIX	NULL
+
+# --- Ordinal to word (test_ordinal_to_word) ---
+
+query IIII
+SELECT ap.street_number, ap.street_name, ap.suffix, ap.pre_direction
+FROM (SELECT addrust_parse('123 42ND ST') AS ap);
+----
+123	FORTYSECOND	STREET	NULL
+
+# --- Ordinal street with direction (test_ordinal_street) ---
+
+query IIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 W 42ND ST') AS ap);
+----
+123	W	FORTYSECOND	STREET
+
+# --- Multiple ordinals (test_multiple_ordinals) ---
+
+query III
+SELECT ap.street_number, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 1ST AND 2ND ST') AS ap);
+----
+123	FIRST AND SECOND	STREET
+
+# --- Fractional road (test_fractional_road) ---
+
+query III
+SELECT ap.street_number, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 8 1/2 MILE RD') AS ap);
+----
+123	EIGHT AND ONEHALF MILE	ROAD
+
+# --- Zero street number preserved (test_bare_zero_street_number_preserved) ---
+
+query II
+SELECT ap.street_number, ap.street_name
+FROM (SELECT addrust_parse('0 Main St') AS ap);
+----
+0	MAIN
+
+# --- Highway one not extracted as number (test_highway_one_not_extracted_as_number) ---
+
+query II
+SELECT ap.street_number, ap.street_name
+FROM (SELECT addrust_parse('HIGHWAY 1') AS ap);
+----
+NULL	HIGHWAY ONE
+
+# --- County road number (test_county_road_number) ---
+
+query III
+SELECT ap.street_number, ap.street_name, ap.suffix
+FROM (SELECT addrust_parse('123 COUNTY ROAD 5') AS ap);
+----
+123	COUNTY ROAD FIVE	NULL
+
+# --- Unit leading zeros stripped (test_source_rewrite_no_side_effects) ---
+
+query IIII
+SELECT ap.street_number, ap.street_name, ap.unit, ap.unit_type
+FROM (SELECT addrust_parse('123 Main St #007') AS ap);
+----
+123	MAIN	7	#
+
+# --- PO Box variants (test_po_box_variants from pipeline.rs) ---
+
+query I
+SELECT ap.po_box FROM (SELECT addrust_parse('PO BOX 123') AS ap);
+----
+PO BOX 123
+
+query I
+SELECT ap.po_box FROM (SELECT addrust_parse('P O BOX 123') AS ap);
+----
+PO BOX 123
+
+query I
+SELECT ap.po_box FROM (SELECT addrust_parse('P.O. BOX 123') AS ap);
+----
+PO BOX 123
+
+query I
+SELECT ap.po_box FROM (SELECT addrust_parse('POBOX 123') AS ap);
+----
+PO BOX 123
+
+query I
+SELECT ap.po_box FROM (SELECT addrust_parse('PO BOX A') AS ap);
+----
+PO BOX A
+
+# --- City/State/Zip extraction ---
+
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('123 Main St, Springfield IL 62704') AS ap);
+----
+SPRINGFIELD	IL	62704
+
+# --- Batch processing via table ---
+
+statement ok
+CREATE TABLE test_addrust_addresses AS SELECT * FROM VALUES
+    (1, '100 N BROADWAY STE 200'),
+    (2, 'PO BOX 555'),
+    (3, '42 W ELM ST APT 3B')
+AS t(id, addr);
+
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.unit_type, ap.unit, ap.po_box
+FROM test_addrust_addresses, LATERAL (SELECT addrust_parse(addr) AS ap)
+ORDER BY id;
+----
+100	N	BROADWAY	NULL	STE	200	NULL
+NULL	NULL	NULL	NULL	NULL	NULL	PO BOX 555
+42	W	ELM	STREET	APT	3B	NULL
