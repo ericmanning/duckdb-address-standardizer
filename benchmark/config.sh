@@ -23,7 +23,7 @@ CREATEDB="$PG_BIN/createdb"
 DUCKDB_BIN="${DUCKDB_BIN:-duckdb}"
 DUCKDB_CLI="$DUCKDB_BIN -unsigned"
 DUCKDB_DB="/tmp/address_bench.duckdb"
-DUCKDB_EXT="$REPO_DIR/build/release/address_standardizer.duckdb_extension"
+DUCKDB_EXT="$REPO_DIR/build/release/us_address_standardizer.duckdb_extension"
 
 # --- Benchmark parameters ---
 RESULTS_DIR="/tmp/bench_results"

@@ -1,8 +1,8 @@
 # name: test/sql/address_standardizer.test
 # description: Test parse_address function
-# group: [address_standardizer]
+# group: [us_address_standardizer]
 
-require address_standardizer
+require us_address_standardizer
 
 # ---- parse_address: empty/blank input edge cases ----
 

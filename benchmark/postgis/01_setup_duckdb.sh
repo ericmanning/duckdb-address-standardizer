@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the DuckDB address_standardizer extension (release).
+# Build the DuckDB us_address_standardizer extension (release).
 source "$(dirname "$0")/../config.sh"
 
 echo "=== DuckDB Extension Setup ==="

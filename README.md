@@ -99,7 +99,7 @@ Same signatures as `standardize_address`. Returns a human-readable debug trace i
 ## Usage
 
 ```sql
-LOAD 'address_standardizer';
+LOAD 'us_address_standardizer';
 
 -- ─── addrust parser (no reference tables needed) ───────────────
 

@@ -1,8 +1,8 @@
 # name: test/sql/debug_standardize_address.test
 # description: Test debug_standardize_address function
-# group: [address_standardizer]
+# group: [us_address_standardizer]
 
-require address_standardizer
+require us_address_standardizer
 
 # ---- Load reference data ----
 

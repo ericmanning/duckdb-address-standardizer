@@ -1,8 +1,8 @@
 # name: test/sql/addrust_parse.test
 # description: Functional tests for addrust_parse (mirrors addrust tests/config.rs default pipeline)
-# group: [address_standardizer]
+# group: [us_address_standardizer]
 
-require address_standardizer
+require us_address_standardizer
 
 # --- NULL / edge cases ---
 

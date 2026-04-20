@@ -1,7 +1,7 @@
 /*
  * duckdb_entry.c
  *
- * Entry point for the DuckDB address_standardizer extension.
+ * Entry point for the DuckDB us_address_standardizer extension.
  * Registers parse_address() and standardize_address() scalar functions.
  */
 

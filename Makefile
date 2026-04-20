@@ -3,17 +3,18 @@
 PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Main extension configuration
-EXTENSION_NAME=address_standardizer
+EXTENSION_NAME=us_address_standardizer
 
 # Set to 1 to enable Unstable API
 USE_UNSTABLE_C_API=0
 
 # The stable C Extension API version (what gets stamped into the extension metadata).
-# DuckDB 1.5.0 still uses C API v1.2.0 for the stable interface.
+# Stable C API has been frozen at v1.2.0 since DuckDB 1.2.0 — pinning here maximizes
+# forward-compatibility with future DuckDB releases.
 TARGET_DUCKDB_VERSION=v1.2.0
 
 # DuckDB release to download headers from (may be newer than the API version).
-DUCKDB_HEADER_VERSION=v1.5.1
+DUCKDB_HEADER_VERSION=v1.5.2
 
 all: configure release
 

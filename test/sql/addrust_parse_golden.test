@@ -1,8 +1,8 @@
 # name: test/sql/addrust_parse_golden.test
 # description: Golden dataset tests (mirrors addrust tests/golden.rs)
-# group: [address_standardizer]
+# group: [us_address_standardizer]
 
-require address_standardizer
+require us_address_standardizer
 
 # Golden 1: NA input → all fields empty
 query IIIIIII

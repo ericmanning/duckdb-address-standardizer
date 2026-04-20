@@ -12,3 +12,5 @@ addrust = { path = "../addrust", default-features = false }
 [profile.release]
 opt-level = "z"
 strip = true
+# Panic unwinding across the C FFI boundary is UB; abort instead.
+panic = "abort"

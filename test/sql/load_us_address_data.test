@@ -1,8 +1,8 @@
 # name: test/sql/load_us_address_data.test
 # description: Test load_us_address_data() function
-# group: [address_standardizer]
+# group: [us_address_standardizer]
 
-require address_standardizer
+require us_address_standardizer
 
 # Test 0-arg: load into current schema
 statement ok
