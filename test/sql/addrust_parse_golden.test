@@ -95,12 +95,12 @@ FROM (SELECT addrust_parse('100 F Ave') AS ap);
 ----
 100	NULL	F	AVENUE	NULL	NULL	NULL
 
-# Golden 14: Hash-number unit → street_number
+# Golden 14: Hash-number unit → unit
 query IIIIIII
 SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
 FROM (SELECT addrust_parse('Main St #5') AS ap);
 ----
-5	NULL	MAIN	STREET	NULL	NULL	NULL
+NULL	NULL	MAIN	STREET	NULL	5	NULL
 
 # Golden 15: Name not confused with AND suffix
 query IIIIIII
@@ -136,3 +136,82 @@ SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_di
 FROM (SELECT addrust_parse('PO Box 343 789 S Oak Ave') AS ap);
 ----
 789	S	OAK	AVENUE	NULL	NULL	PO BOX 343
+
+# Golden 20: Number stuck to single-letter direction → split
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('3862S LAKE DR') AS ap);
+----
+3862	S	LAKE	DRIVE	NULL	NULL	NULL
+
+# Golden 21: Trailing alphanumeric unit (no APT/UNIT prefix)
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Main St 5B') AS ap);
+----
+123	NULL	MAIN	STREET	NULL	5B	NULL
+
+# Golden 22: Trailing single-letter unit (excludes N/S/E/W)
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('123 Main St B') AS ap);
+----
+123	NULL	MAIN	STREET	NULL	B	NULL
+
+# Golden 23: Bare I + highway number → INTERSTATE
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('I 95 N') AS ap);
+----
+NULL	NULL	INTERSTATE NINETYFIVE	NULL	N	NULL	NULL
+
+# Golden 24: Hyphen-joined interstate
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('I-95') AS ap);
+----
+NULL	NULL	INTERSTATE NINETYFIVE	NULL	NULL	NULL	NULL
+
+# Golden 25: Wisconsin-grid coord-pair street number
+query IIIIIII
+SELECT ap.street_number, ap.pre_direction, ap.street_name, ap.suffix, ap.post_direction, ap.unit, ap.po_box
+FROM (SELECT addrust_parse('N123 W456 MAIN ST') AS ap);
+----
+N123 W456	NULL	MAIN	STREET	NULL	NULL	NULL
+
+# --- City / State / Zip extraction (regression coverage for the 0.1.2 csz bug) ---
+
+# Golden 26: Comma-anchored single-word city
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('123 Main St, Springfield IL 62704') AS ap);
+----
+SPRINGFIELD	IL	62704
+
+# Golden 27: Comma-anchored multi-word city
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('MAIN ST, Winston Salem NC 12345') AS ap);
+----
+WINSTON SALEM	NC	12345
+
+# Golden 28: Start-anchored hyphen-joined city (no street prefix)
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('WINSTON-SALEM NC 12345') AS ap);
+----
+WINSTON-SALEM	NC	12345
+
+# Golden 29: ZIP+4
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('123 Main St, Springfield IL 62704-1234') AS ap);
+----
+SPRINGFIELD	IL	62704-1234
+
+# Golden 30: Trailing US country marker
+query III
+SELECT ap.city, ap.state, ap.zip
+FROM (SELECT addrust_parse('123 Main St, Springfield IL 62704 US') AS ap);
+----
+SPRINGFIELD	IL	62704
