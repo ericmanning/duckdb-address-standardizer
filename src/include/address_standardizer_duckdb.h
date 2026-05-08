@@ -9,6 +9,7 @@
 
 #include "duckdb_extension.h"
 #include "parseaddress-api.h"
+#include "portable_threads.h"
 #include <string.h>
 
 /*
@@ -18,8 +19,8 @@
  * for the lifetime of the thread.
  */
 static inline HHash *get_cached_state_hash(int *err) {
-    static _Thread_local HHash _cached_stH;
-    static _Thread_local int _stH_initialized = 0;
+    static PORT_THREAD_LOCAL HHash _cached_stH;
+    static PORT_THREAD_LOCAL int _stH_initialized = 0;
 
     if (!_stH_initialized) {
         memset(&_cached_stH, 0, sizeof(HHash));

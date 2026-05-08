@@ -20,7 +20,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 DUCKDB_EXTENSION_EXTERN
 
@@ -363,7 +362,7 @@ static STANDARDIZER *create_standardizer(duckdb_connection conn,
 
 typedef struct {
     duckdb_connection connection;  /* dedicated connection for loading reference data */
-    pthread_mutex_t mutex;         /* serialize all standardization */
+    port_mutex_t mutex;         /* serialize all standardization */
     STANDARDIZER *template_std;    /* cached standardizer (owns lex/gaz/rules + working buffers) */
     char *cached_lex;
     char *cached_gaz;
@@ -372,7 +371,7 @@ typedef struct {
 
 static void std_extra_info_delete(void *data) {
     std_extra_info *info = (std_extra_info *)data;
-    pthread_mutex_destroy(&info->mutex);
+    port_mutex_destroy(&info->mutex);
     if (info->template_std) std_free(info->template_std);
     if (info->connection) duckdb_disconnect(&info->connection);
     free(info->cached_lex);
@@ -401,7 +400,7 @@ static int acquire_standardizer(std_extra_info *extra,
                                  const char *lextab,
                                  const char *gaztab,
                                  const char *rultab) {
-    pthread_mutex_lock(&extra->mutex);
+    port_mutex_lock(&extra->mutex);
 
     if (cache_matches(extra, lextab, gaztab, rultab))
         return 1;
@@ -421,7 +420,7 @@ static int acquire_standardizer(std_extra_info *extra,
         return 1;
     }
 
-    pthread_mutex_unlock(&extra->mutex);
+    port_mutex_unlock(&extra->mutex);
     return 0;
 }
 
@@ -530,7 +529,7 @@ static void standardize_address_mm_func(duckdb_function_info info,
         }
     }
 
-    if (locked) pthread_mutex_unlock(&extra->mutex);
+    if (locked) port_mutex_unlock(&extra->mutex);
 
     /* ---- Cleanup ---- */
     for (idx_t row = 0; row < input_size; row++) {
@@ -630,7 +629,7 @@ static void standardize_address_one_func(duckdb_function_info info,
         free(micro); free(lextab); free(gaztab); free(rultab); free(addr);
     }
 
-    if (locked) pthread_mutex_unlock(&extra->mutex);
+    if (locked) port_mutex_unlock(&extra->mutex);
 }
 
 /* ---- Registration ---- */
@@ -670,7 +669,7 @@ void register_standardize_address(duckdb_connection connection,
         /* Create a dedicated connection for reference data queries.
          * The init connection is temporary and gets disconnected after init. */
         duckdb_connect(*db, &extra->connection);
-        pthread_mutex_init(&extra->mutex, NULL);
+        port_mutex_init(&extra->mutex);
         duckdb_scalar_function_set_extra_info(function, extra, std_extra_info_delete);
 
         duckdb_register_scalar_function(connection, function);
@@ -690,7 +689,7 @@ void register_standardize_address(duckdb_connection connection,
 
         std_extra_info *extra = (std_extra_info *)calloc(1, sizeof(std_extra_info));
         duckdb_connect(*db, &extra->connection);
-        pthread_mutex_init(&extra->mutex, NULL);
+        port_mutex_init(&extra->mutex);
         duckdb_scalar_function_set_extra_info(function, extra, std_extra_info_delete);
 
         duckdb_register_scalar_function(connection, function);

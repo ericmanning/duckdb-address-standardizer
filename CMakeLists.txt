@@ -122,8 +122,14 @@ else()
     set(CARGO_BUILD_FLAG "")
 endif()
 
-# Static lib name varies by platform/toolchain
-set(ADDRUST_LIB_NAME libaddrust_ffi.a)
+# Static lib name varies by platform/toolchain. MSVC emits `addrust_ffi.lib`
+# (no `lib` prefix, `.lib` suffix); everything else (incl. MinGW) emits the
+# Unix-style `libaddrust_ffi.a`.
+if(MSVC)
+    set(ADDRUST_LIB_NAME addrust_ffi.lib)
+else()
+    set(ADDRUST_LIB_NAME libaddrust_ffi.a)
+endif()
 
 # Cross-compilation: map DUCKDB_PLATFORM to Cargo --target.
 # CI passes DUCKDB_PLATFORM as an env var; read it into a CMake variable.
@@ -146,6 +152,9 @@ if(DEFINED DUCKDB_PLATFORM)
     elseif(DUCKDB_PLATFORM MATCHES "windows_amd64_mingw|windows_amd64_rtools")
         set(CARGO_TARGET_FLAG --target x86_64-pc-windows-gnu)
         set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/x86_64-pc-windows-gnu)
+    elseif(DUCKDB_PLATFORM STREQUAL "windows_amd64")
+        set(CARGO_TARGET_FLAG --target x86_64-pc-windows-msvc)
+        set(CARGO_TARGET_DIR ${ADDRUST_FFI_DIR}/target/x86_64-pc-windows-msvc)
     endif()
 endif()
 

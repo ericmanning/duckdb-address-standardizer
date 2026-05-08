@@ -15,7 +15,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 DUCKDB_EXTENSION_EXTERN
 
@@ -75,7 +74,7 @@ static void set_row_invalid_addrust(duckdb_vector output, idx_t row) {
  * Thread-local default pipeline (1-arg overload)
  * ---------------------------------------------------------------- */
 
-static _Thread_local AddrstPipeline *_default_pipeline = NULL;
+static PORT_THREAD_LOCAL AddrstPipeline *_default_pipeline = NULL;
 
 static AddrstPipeline *get_default_pipeline(void) {
     if (!_default_pipeline) {
@@ -89,7 +88,7 @@ static AddrstPipeline *get_default_pipeline(void) {
  * ---------------------------------------------------------------- */
 
 typedef struct {
-    pthread_mutex_t mutex;
+    port_mutex_t mutex;
     AddrstPipeline *pipeline;
     char *cached_path;
 } addrust_config_cache;
@@ -98,13 +97,13 @@ static void free_config_cache(void *data) {
     addrust_config_cache *cache = (addrust_config_cache *)data;
     if (cache->pipeline) addrust_pipeline_free(cache->pipeline);
     free(cache->cached_path);
-    pthread_mutex_destroy(&cache->mutex);
+    port_mutex_destroy(&cache->mutex);
     free(cache);
 }
 
 static AddrstPipeline *get_config_pipeline(addrust_config_cache *cache,
                                             const char *config_path) {
-    pthread_mutex_lock(&cache->mutex);
+    port_mutex_lock(&cache->mutex);
     if (!cache->pipeline || !cache->cached_path ||
         strcmp(cache->cached_path, config_path) != 0) {
         if (cache->pipeline) addrust_pipeline_free(cache->pipeline);
@@ -113,7 +112,7 @@ static AddrstPipeline *get_config_pipeline(addrust_config_cache *cache,
         cache->cached_path = strdup(config_path);
     }
     AddrstPipeline *p = cache->pipeline;
-    pthread_mutex_unlock(&cache->mutex);
+    port_mutex_unlock(&cache->mutex);
     return p;
 }
 
@@ -261,7 +260,7 @@ void register_addrust_parse(duckdb_connection connection) {
 
         /* Attach config cache as extra_info */
         addrust_config_cache *cache = calloc(1, sizeof(addrust_config_cache));
-        pthread_mutex_init(&cache->mutex, NULL);
+        port_mutex_init(&cache->mutex);
         duckdb_scalar_function_set_extra_info(fn, cache, free_config_cache);
 
         duckdb_register_scalar_function(connection, fn);
