@@ -140,7 +140,7 @@ FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules',
 | macOS (arm64) | Supported |
 | macOS (amd64) | Not yet — CI cross-compilation gap for C API extensions |
 | Windows (MinGW) | Supported |
-| Windows (MSVC) | Not yet — needs `pthread_mutex` → `CRITICAL_SECTION` abstraction |
+| Windows (MSVC) | Supported |
 | WASM | Not supported — requires threading primitives unavailable in WASM |
 
 ## License
