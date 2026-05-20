@@ -14,7 +14,7 @@ USE_UNSTABLE_C_API=0
 TARGET_DUCKDB_VERSION=v1.2.0
 
 # DuckDB release to download headers from (may be newer than the API version).
-DUCKDB_HEADER_VERSION=v1.5.2
+DUCKDB_HEADER_VERSION=v1.5.3
 
 all: configure release
 
