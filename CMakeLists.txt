@@ -69,9 +69,6 @@ target_compile_definitions(${EXTENSION_NAME} PRIVATE
     # Empty, not 1: upstream's pagc_api.h/pagc_std_api.h also do a bare
     # `#define BUILD_API`, and identical definitions avoid -Wmacro-redefined.
     BUILD_API=
-    # Upstream splits pagc_tools.c/standard.c into PostgreSQL and standalone
-    # paths; without this they pull in real PG headers (mb/pg_wchar.h etc).
-    PAGC_STANDALONE
     PCRE_VERSION=2
     AS_VERSION="4.0.0"
 )

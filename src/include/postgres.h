@@ -73,4 +73,32 @@ static inline char *pstrdup(const char *s) {
     return strdup(s);
 }
 
+/* ---- ereport / errmsg ----
+ * Upstream calls ereport(ERROR, ...) in upper_case() when a normalized or
+ * uppercased token would exceed MAXSTRLEN.  In PostgreSQL that longjmps out;
+ * we have no equivalent at this layer, so the call is a no-op and the code
+ * that follows clamps to MAXSTRLEN on its own (both paths bound their writes
+ * against an explicit `end` pointer or use strlcpy).  The effect is that an
+ * over-long token is truncated rather than raising -- which is what the
+ * scanner already does elsewhere. */
+#define errmsg(...) 0
+#define ereport(level, rest) ((void) 0)
+
+/* ---- strlcpy ---- *
+ * Not available on MSVC or older glibc.  Always route through our own so the
+ * behaviour is identical across platforms. */
+static inline size_t pagc_shim_strlcpy(char *dst, const char *src, size_t size) {
+    size_t srclen = strlen(src);
+    if (size > 0) {
+        size_t copylen = (srclen >= size) ? size - 1 : srclen;
+        memcpy(dst, src, copylen);
+        dst[copylen] = '\0';
+    }
+    return srclen;
+}
+#ifdef strlcpy
+#undef strlcpy          /* macOS string.h defines a fortify macro */
+#endif
+#define strlcpy pagc_shim_strlcpy
+
 #endif /* POSTGRES_H_SHIM */
