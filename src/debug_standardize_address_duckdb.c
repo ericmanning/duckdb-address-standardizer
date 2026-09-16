@@ -111,22 +111,6 @@ static void dynbuf_append_json_string(DynBuf *buf, const char *str) {
     dynbuf_append_char(buf, '"');
 }
 
-/* ---- Helpers duplicated from address_standardizer_duckdb.c ---- */
-
-#define MAX_RULE_LENGTH 128
-
-/* Check table name is safe (alphanumeric, _, .) */
-static int dbg_table_name_ok(const char *t) {
-    if (!t || !*t) return 0;
-    while (*t != '\0') {
-        if (!((*t >= 'a' && *t <= 'z') || (*t >= 'A' && *t <= 'Z') ||
-              (*t >= '0' && *t <= '9') || *t == '_' || *t == '.'))
-            return 0;
-        t++;
-    }
-    return 1;
-}
-
 static char *dbg_extract_string(duckdb_vector vec, idx_t row) {
     duckdb_string_t raw = ((duckdb_string_t *)duckdb_vector_get_data(vec))[row];
     const char *str;
@@ -157,35 +141,15 @@ static int dbg_any_input_null(duckdb_vector *vecs, int nvecs, idx_t row) {
     return 0;
 }
 
-/* ---- Rule parsing ---- */
-
-static int dbg_parse_rule(const char *buf, int *rule) {
-    int nr = 0;
-    int *r = rule;
-    const char *p = buf;
-    char *q;
-
-    while (1) {
-        *r = strtol(p, &q, 10);
-        if (p == q) break;
-        p = q;
-        nr++;
-        r++;
-        if (nr > MAX_RULE_LENGTH) return -1;
-    }
-    return nr;
-}
-
-/* ---- DuckDB table loading (duplicated from address_standardizer_duckdb.c) ---- */
+/* ---- DuckDB table loading ---- */
 
 static int dbg_load_lex(duckdb_connection conn, LEXICON *lex, const char *tabname) {
     char sql[512];
     duckdb_result result;
 
-    if (!dbg_table_name_ok(tabname)) return -1;
-
-    snprintf(sql, sizeof(sql),
-             "SELECT seq, word, stdword, token FROM %s ORDER BY id", tabname);
+    if (as_build_table_query(sql, sizeof(sql),
+                             "SELECT seq, word, stdword, token", tabname) != 0)
+        return -1;
 
     if (duckdb_query(conn, sql, &result) == DuckDBError) {
         duckdb_destroy_result(&result);
@@ -226,9 +190,8 @@ static int dbg_load_rules(duckdb_connection conn, RULES *rules, const char *tabn
     duckdb_result result;
     int rule_arr[MAX_RULE_LENGTH];
 
-    if (!dbg_table_name_ok(tabname)) return -1;
-
-    snprintf(sql, sizeof(sql), "SELECT rule FROM %s ORDER BY id", tabname);
+    if (as_build_table_query(sql, sizeof(sql), "SELECT rule", tabname) != 0)
+        return -1;
 
     if (duckdb_query(conn, sql, &result) == DuckDBError) {
         duckdb_destroy_result(&result);
@@ -245,7 +208,7 @@ static int dbg_load_rules(duckdb_connection conn, RULES *rules, const char *tabn
             char *rule_str = dbg_extract_string(v_rule, i);
             if (!rule_str) { err = 1; break; }
 
-            int nr = dbg_parse_rule(rule_str, rule_arr);
+            int nr = as_parse_rule(rule_str, rule_arr);
             free(rule_str);
 
             if (nr == -1 || rules_add_rule(rules, nr, rule_arr) != 0) {
@@ -460,7 +423,7 @@ static char *dbg_build_postcode(const ADDRESS *paddr) {
 static void lookup_rule(duckdb_connection conn, const char *rultab,
                         const char *stub, DynBuf *buf) {
     char sql[1024];
-    if (!dbg_table_name_ok(rultab)) {
+    if (!as_table_name_ok(rultab)) {
         dynbuf_append(buf, ", \"rule_id\": -1");
         return;
     }
