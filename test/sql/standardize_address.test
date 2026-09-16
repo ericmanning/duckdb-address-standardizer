@@ -9115,3 +9115,35 @@ SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '  
 ----
 NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL
 
+
+# ---- Unit field: header/identifier ordering (upstream 4.0.0dev) ----
+#
+# These mirror the #unit_order, #hash_unit, #hash_unit_attached and #ca_postal
+# cases added to postgis/address_standardizer test/sql/standardize_address_1.sql.
+# Upstream's _scan_unit_target_ scans UNITH and UNITT in lexical order, so a unit
+# header is no longer hoisted ahead of an identifier that preceded it. Released
+# address_standardizer 3.7 yields 'APARTMENT REAR 2' here; we track upstream main.
+
+# #unit_order: identifier before header stays in input order
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '123 Main St Rear Apt 2', 'Boston, MA') as sa);
+----
+NULL	123	NULL	NULL	NULL	MAIN	STREET	NULL	NULL	NULL	BOSTON	MASSACHUSETTS	NULL	NULL	NULL	REAR APARTMENT 2
+
+# #hash_unit: bare '#' unit marker
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '123 Main St #4', 'Boston, MA') as sa);
+----
+NULL	123	NULL	NULL	NULL	MAIN	STREET	NULL	NULL	NULL	BOSTON	MASSACHUSETTS	NULL	NULL	NULL	# 4
+
+# #hash_unit_attached: '#' with no separating space
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '123 Main St#4', 'Boston, MA') as sa);
+----
+NULL	123	NULL	NULL	NULL	MAIN	STREET	NULL	NULL	NULL	BOSTON	MASSACHUSETTS	NULL	NULL	NULL	# 4
+
+# #ca_postal: Canadian postal code keeps its internal space
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '123 King St', 'Toronto, ON M5V 2T6') as sa);
+----
+NULL	123	NULL	NULL	NULL	KING	STREET	NULL	NULL	NULL	TORONTO	ONTARIO	NULL	M5V 2T6	NULL	NULL
