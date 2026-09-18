@@ -9147,3 +9147,41 @@ query IIIIIIIIIIIIIIII
 SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '123 King St', 'Toronto, ON M5V 2T6') as sa);
 ----
 NULL	123	NULL	NULL	NULL	KING	STREET	NULL	NULL	NULL	TORONTO	ONTARIO	NULL	M5V 2T6	NULL	NULL
+
+# ---- Accented input (UTF-8 path) ----
+#
+# DuckDB strings are always UTF-8. src/include/mb/pg_wchar.h and friends shim the
+# PostgreSQL multibyte API upstream's non-PAGC_STANDALONE path expects, so accented
+# tokens survive tokenization instead of being split at the accent byte.
+# Before this, '100 Peña Blvd' yielded name 'PE A' and 'Montréal' yielded city
+# 'MONTR ALABAMA'.
+
+# Precomposed U+00F1
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '100 Peña Blvd', 'Denver, CO 80249') as sa);
+----
+NULL	100	NULL	NULL	NULL	PEÑA	BOULEVARD	NULL	NULL	NULL	DENVER	COLORADO	NULL	80249	NULL	NULL
+
+# Decomposed n + U+0303 normalizes to the same token
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '100 Peña Blvd', 'Denver, CO 80249') as sa);
+----
+NULL	100	NULL	NULL	NULL	PEÑA	BOULEVARD	NULL	NULL	NULL	DENVER	COLORADO	NULL	80249	NULL	NULL
+
+# Precomposed U+00C9
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '1 Élan St', 'Austin, TX 78701') as sa);
+----
+NULL	1	NULL	NULL	NULL	ÉLAN	STREET	NULL	NULL	NULL	AUSTIN	TEXAS	NULL	78701	NULL	NULL
+
+# Decomposed E + U+0301
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '1 Élan St', 'Austin, TX 78701') as sa);
+----
+NULL	1	NULL	NULL	NULL	ÉLAN	STREET	NULL	NULL	NULL	AUSTIN	TEXAS	NULL	78701	NULL	NULL
+
+# U+2019 right single quote reads as an apostrophe
+query IIIIIIIIIIIIIIII
+SELECT sa.* FROM (SELECT standardize_address('us_lex', 'us_gaz', 'us_rules', '12 Dias d’Ávila Rd', 'Denver, CO 80249') as sa);
+----
+NULL	12	NULL	NULL	NULL	DIAS D'ÁVILA	ROAD	NULL	NULL	NULL	DENVER	COLORADO	NULL	80249	NULL	NULL
